@@ -62,13 +62,6 @@ func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request)  {
 		w.Write(RspInvalidDomainName)
 		return
 	}
-	//validDays := Cfg.SelfSigned.ValidDays
-	//organization := Cfg.SelfSigned.Organization
-	//
-	//certPEM, privKeyPEM, err := CreateSelfSignedCertificate(validDays, organization)
-	//
-	//fmt.Print(string(certPEM))
-	//fmt.Print(string(privKeyPEM))
 
 	var tlscert *tls.Certificate
 	var certType int
@@ -159,7 +152,7 @@ func marshalCertificate(cert *tls.Certificate, certType int, ttl int)  ([]byte, 
 
 func (m *Manager) GetCertificateByName(name string) (tlscert *tls.Certificate, certType int, err error) {
 	certType = SelfSigned
-	tlscert, err = GetSelfSignedCertificate()
+	tlscert, err = GetSelfSignedCertificate(name)
 	return
 }
 

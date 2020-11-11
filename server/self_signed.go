@@ -36,7 +36,7 @@ func IsSelfSignedAllowed(domain string) bool {
 	return true
 }
 
-func GetSelfSignedCertificate() (*tls.Certificate, error) {
+func GetSelfSignedCertificate(domain string) (*tls.Certificate, error) {
 	if tlscert, ok := selfSignedCert.Load().(*tls.Certificate); ok {
 		return tlscert, nil
 	}
@@ -48,7 +48,7 @@ func GetSelfSignedCertificate() (*tls.Certificate, error) {
 	}
 
 	// check storage first
-	tlscert, err := loadCertificateFromStore(Cfg.SelfSigned.CertKey)
+	tlscert, err := loadCertificateFromStore(domain)
 	if err != nil && err != autocert.ErrCacheMiss {
 		return nil, fmt.Errorf("self_signed: %v", err)
 	}
