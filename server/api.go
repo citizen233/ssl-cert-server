@@ -11,12 +11,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"golang.org/x/net/idna"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"golang.org/x/net/idna"
 )
 
 // Certificate types
@@ -54,7 +53,7 @@ func (m *Manager) BuildRoutes(mux *http.ServeMux) {
 // - 400 the requested domain name is invalid or not permitted
 // - 500 which indicates the server failed to process the request,
 //       in such case, the body will be filled with the error message
-func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request) {
+func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request)  {
 	domain := strings.TrimPrefix(r.URL.Path, "/cert/")
 	domain, err := idna.Lookup.ToASCII(domain)
 	if err != nil {
@@ -63,16 +62,17 @@ func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request) {
 		w.Write(RspInvalidDomainName)
 		return
 	}
+	//validDays := Cfg.SelfSigned.ValidDays
+	//organization := Cfg.SelfSigned.Organization
+	//
+	//certPEM, privKeyPEM, err := CreateSelfSignedCertificate(validDays, organization)
+	//
+	//fmt.Print(string(certPEM))
+	//fmt.Print(string(privKeyPEM))
 
 	var tlscert *tls.Certificate
 	var certType int
-	var isALPN01 = r.URL.Query().Get("alpn") == "1"
-	if isALPN01 {
-		certType = ALPNCert
-		tlscert, err = m.GetAutocertALPN01Certificate(domain)
-	} else {
-		tlscert, certType, err = m.GetCertificateByName(domain)
-	}
+	tlscert, certType, err = m.GetCertificateByName(domain)
 	if err != nil {
 		if err == ErrHostNotPermitted {
 			log.Printf("[INFO] manager: domain name not permitted: domain= %s", domain)
@@ -86,15 +86,14 @@ func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	var ttlSeconds int
-	if !isALPN01 {
-		var ttl = time.Until(tlscert.Leaf.NotAfter)
-		if ttl <= 0 {
-			log.Printf("[WARN] manager: got expired certificate: domain= %s", domain)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write(RspCertificateIsExpired)
-			return
-		}
+	var ttl = time.Until(tlscert.Leaf.NotAfter)
+	if ttl <= 0 {
+		log.Printf("[WARN] manager: got expired certificate: domain= %s", domain)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(RspCertificateIsExpired)
+		return
 		ttlSeconds = m.limitTTL(ttl)
 	}
 	response, err := marshalCertificate(tlscert, certType, ttlSeconds)
@@ -108,7 +107,7 @@ func (m *Manager) HandleCertificate(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-func marshalCertificate(cert *tls.Certificate, certType int, ttl int) ([]byte, error) {
+func marshalCertificate(cert *tls.Certificate, certType int, ttl int)  ([]byte, error) {
 	var (
 		err        error
 		certBuf    bytes.Buffer
@@ -159,25 +158,8 @@ func marshalCertificate(cert *tls.Certificate, certType int, ttl int) ([]byte, e
 }
 
 func (m *Manager) GetCertificateByName(name string) (tlscert *tls.Certificate, certType int, err error) {
-	// check managed domains first
-	if certKey, ok := IsManagedDomain(name); ok {
-		certType = Managed
-		tlscert, err = GetManagedCertificate(certKey)
-	} else
-	// check auto issued certificates from Let's Encrypt
-	if err = m.m.HostPolicy(context.Background(), name); err == nil {
-		certType = LetsEncrypt
-		tlscert, err = m.GetAutocertCertificate(name)
-	} else
-	// check self-signed
-	if IsSelfSignedAllowed(name) {
-		certType = SelfSigned
-		tlscert, err = GetSelfSignedCertificate()
-	} else
-	// host not allowed
-	{
-		err = ErrHostNotPermitted
-	}
+	certType = SelfSigned
+	tlscert, err = GetSelfSignedCertificate()
 	return
 }
 
@@ -188,7 +170,7 @@ func (m *Manager) GetCertificateByName(name string) (tlscert *tls.Certificate, c
 // - 204 without body, which indicates OCSP stapling for the requested domain
 //       is not available, temporarily or permanently
 // - 400 which indicates the requested domain name is invalid or not permitted
-func (m *Manager) HandleOCSPStapling(w http.ResponseWriter, r *http.Request) {
+func (m *Manager) HandleOCSPStapling(w http.ResponseWriter, r *http.Request)  {
 	domain := strings.TrimPrefix(r.URL.Path, "/ocsp/")
 	domain, err := idna.Lookup.ToASCII(domain)
 	if err == nil {
@@ -255,3 +237,4 @@ func (m *Manager) limitTTL(ttl time.Duration) int {
 	}
 	return int(ttlSeconds)
 }
+
