@@ -58,7 +58,7 @@ func GetSelfSignedCertificate(domain string) (*tls.Certificate, error) {
 	}
 
 	// cache not available, create new certificate
-	tlscert, err = createAndSaveSelfSignedCertificate()
+	tlscert, err = createAndSaveSelfSignedCertificate(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func GetSelfSignedCertificate(domain string) (*tls.Certificate, error) {
 	return tlscert, nil
 }
 
-func createAndSaveSelfSignedCertificate() (*tls.Certificate, error) {
+func createAndSaveSelfSignedCertificate(domain string) (*tls.Certificate, error) {
 	validDays := Cfg.SelfSigned.ValidDays
 	organization := Cfg.SelfSigned.Organization
 	certPEM, privKeyPEM, err := CreateSelfSignedCertificate(validDays, organization)
@@ -75,7 +75,7 @@ func createAndSaveSelfSignedCertificate() (*tls.Certificate, error) {
 	}
 
 	cacheData := append(privKeyPEM, certPEM...)
-	err = Cfg.Storage.Cache.Put(context.Background(), Cfg.SelfSigned.CertKey, cacheData)
+	err = Cfg.Storage.Cache.Put(context.Background(), domain, cacheData)
 	if err != nil {
 		return nil, fmt.Errorf("self_signed: failed put certificate: %v", err)
 	}
